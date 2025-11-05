@@ -35,4 +35,17 @@ Aplikasi ini mendukung integrasi langsung ke **Google Sheets** dan menampilkan *
 ---
 
 ## 🏗️ Struktur Proyek
-
+ODOO_STOCK_DASHBOARD/
+│
+├── modules/
+│ ├── data_processing.py # ETL dan transformasi CSV
+│ ├── filters.py # Komponen filter interaktif Streamlit
+│ ├── google_sheets.py # Integrasi Google Sheets API
+│ ├── kpi_cards.py # KPI & Scorecards
+│ ├── visuals_advanced.py # Heatmap, Bar Chart, Trend Chart
+│
+├── app.py # Entry point Streamlit
+├── requirements.txt # Daftar dependencies
+├── .env # Konfigurasi lokal (ignored)
+├── secrets/ # Folder credential (ignored)
+└── README.md # Dokumentasi project
