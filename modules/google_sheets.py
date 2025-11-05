@@ -22,8 +22,7 @@ MOVES_COLS = [
     'SKU', 'SKU Name', 'Inbound_Qty', 'Outbound_Qty', 'Quantity', 
     'Status_Replenishment', # (Kolom Status 🟥 🟨 🟩)
     'Type', # (Tipe Inbound/Outbound)
-    'Adjustment Qty', 'Cumulative_SOH',
-    'Daily Usage', 'Moves Category', 'Buffer Stock', 'Shortage' # (Info tambahan)
+    'Adjustment Qty', 'Cumulative_SOH'
 ]
 
 
@@ -35,7 +34,6 @@ def _post_process_read_df(df, sheet_name):
     
     numeric_cols = []
     if sheet_name == "Pivot":
-        # (PERBAIKAN: Skema disinkronkan)
         numeric_cols = [
             'SOH', 'Inbound_Qty', 'Outbound_Qty', 'Adjustment Qty',
             'Daily Usage', 'Lead Time', 'Buffer Stock', 'Shortage', 
@@ -43,11 +41,9 @@ def _post_process_read_df(df, sheet_name):
         ]
     
     elif sheet_name in ["Moves History", "Inbound", "Outbound"]:
-        # (PERBAIKAN: Skema disinkronkan)
         numeric_cols = [
             'Inbound_Qty', 'Outbound_Qty', 'Quantity', 
-            'Adjustment Qty', 'Cumulative_SOH',
-            'Daily Usage', 'Buffer Stock', 'Shortage'
+            'Adjustment Qty', 'Cumulative_SOH'
         ]
 
     for col in numeric_cols:
@@ -61,10 +57,10 @@ def _post_process_read_df(df, sheet_name):
     return df
 
 @st.cache_resource(ttl=3600)
-def get_gspread_client(credentials_source):
+def get_gspread_client(_credentials_source): # (PERBAIKAN: Ditambahkan '_')
     """
     Membuat klien GSpread dengan cache.
-    (PERBAIKAN: Menambahkan try/except untuk testing lokal)
+    (PERBAIKAN: Menambahkan '_' untuk mengabaikan hashing argumen st.secrets)
     """
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
@@ -73,9 +69,9 @@ def get_gspread_client(credentials_source):
     
     creds_path = None
     
-    if credentials_source:
+    if _credentials_source: # (PERBAIKAN: Ditambahkan '_')
         # Jika creds dikirim langsung (dari app.py)
-        creds_path = credentials_source
+        creds_path = _credentials_source # (PERBAIKAN: Ditambahkan '_')
     else:
         try:
             # 1. Coba st.secrets (untuk deploy)
@@ -98,57 +94,44 @@ def get_gspread_client(credentials_source):
         return None
     
     client = gspread.authorize(creds)
-    # (PERBAIKAN: Tambahkan timeout 30 detik)
     client.set_timeout(30)
     return client
 
 def read_all_data(spreadsheet_id, creds):
     """
     Membaca 4 sheet data dari GSheet dengan cara yang "tahan banting".
-    (PERBAIKAN: Menghapus 'updated_at' untuk stabilitas)
     """
-    client = get_gspread_client(creds)
+    client = get_gspread_client(creds) # Panggilan ini sekarang aman untuk di-cache
     if client is None:
         raise Exception("Gagal mendapatkan klien Google Sheet.")
     
     try:
         sh = client.open_by_key(spreadsheet_id)
         
-        # --- (PERBAIKAN: 'updated_at' dihapus) ---
         try:
-            # Coba ambil timestamp dari properti 'updated' (jika ada)
             update_time = pd.to_datetime(sh.updated)
         except Exception:
-            # Fallback jika gagal
-            update_time = datetime.now() # Gunakan waktu saat ini
+            update_time = datetime.now() 
         
         def read_sheet_safely(ws_name, expected_cols):
             """
             (PERBAIKAN: Ini adalah logika paling aman untuk 'KeyError')
-            Membaca data menggunakan get_values() dan Menerapkan header kita.
             """
             try:
                 ws = sh.worksheet(ws_name)
-                
-                # Ambil semua nilai (termasuk header GSheet)
                 data = ws.get_values()
                 
-                if len(data) < 1: # Jika sheet benar-benar kosong
+                if len(data) < 1: 
                     return pd.DataFrame(columns=expected_cols)
 
-                # Ambil header GSheet (baris 1)
                 gsheet_header = data[0]
                 
-                # Ambil data (baris 2 dst), jika ada
                 if len(data) < 2:
                     data_rows = []
                 else:
                     data_rows = data[1:]
 
-                # Buat DataFrame menggunakan header GSheet
                 df = pd.DataFrame(data_rows, columns=gsheet_header)
-                
-                # (PERBAIKAN PENTING: Paksa DF agar memiliki kolom yang kita harapkan)
                 df = df.reindex(columns=expected_cols) 
                 return df
                 
@@ -178,9 +161,8 @@ def read_all_data(spreadsheet_id, creds):
 def upload_all_data(spreadsheet_id, creds, inbound_df, outbound_df, pivot_df, daily_soh_df):
     """
     Mengunggah 4 DataFrame ke GSheet dengan chunking dan jeda.
-    (PERBAIKAN: Error 500)
     """
-    client = get_gspread_client(creds)
+    client = get_gspread_client(creds) # Panggilan ini aman
     if client is None:
         raise Exception("Gagal mendapatkan klien Google Sheet untuk upload.")
     
@@ -196,7 +178,6 @@ def upload_all_data(spreadsheet_id, creds, inbound_df, outbound_df, pivot_df, da
             ws = sh.worksheet(ws_name)
             ws.clear()
             
-            # Konversi NaT/NaN menjadi string kosong
             df_upload = df.fillna('').astype(str)
             df_upload.replace('NaT', '', inplace=True)
             
@@ -242,4 +223,3 @@ def upload_all_data(spreadsheet_id, creds, inbound_df, outbound_df, pivot_df, da
     except Exception as e:
         # Error sudah ditampilkan oleh upload_sheet
         return None
-
