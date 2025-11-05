@@ -1,0 +1,36 @@
+--- File Rahasia (Sangat Penting!) ---
+
+JANGAN PERNAH unggah file-file ini ke GitHub
+
+.env
+.streamlit/secrets.toml
+
+(PERBAIKAN: Tambahkan file .json kredensial apa pun)
+secrets/
+*.json
+
+--- Lingkungan Virtual Python ---
+
+Abaikan seluruh folder 'venv' Anda
+
+venv/
+/venv/
+*.venv
+.venv
+
+--- Cache Python & OS ---
+
+pycache/
+*.pyc
+*.pyo
+*.pyd
+
+File spesifik OS
+
+.DS_Store
+Thumbs.db
+
+File IDE (Visual Studio Code, PyCharm)
+
+.vscode/
+.idea/
