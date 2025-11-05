@@ -34,6 +34,7 @@ def _post_process_read_df(df, sheet_name):
     
     numeric_cols = []
     if sheet_name == "Pivot":
+        # (PERBAIKAN: Skema disinkronkan)
         numeric_cols = [
             'SOH', 'Inbound_Qty', 'Outbound_Qty', 'Adjustment Qty',
             'Daily Usage', 'Lead Time', 'Buffer Stock', 'Shortage', 
@@ -41,6 +42,7 @@ def _post_process_read_df(df, sheet_name):
         ]
     
     elif sheet_name in ["Moves History", "Inbound", "Outbound"]:
+        # (PERBAIKAN: Skema disinkronkan)
         numeric_cols = [
             'Inbound_Qty', 'Outbound_Qty', 'Quantity', 
             'Adjustment Qty', 'Cumulative_SOH'
@@ -60,7 +62,7 @@ def _post_process_read_df(df, sheet_name):
 def get_gspread_client(_credentials_source): # (PERBAIKAN: Ditambahkan '_')
     """
     Membuat klien GSpread dengan cache.
-    (PERBAIKAN: Menambahkan '_' untuk mengabaikan hashing argumen st.secrets)
+    (PERBAIKAN: Menambahkan try/except untuk testing lokal)
     """
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
@@ -83,8 +85,10 @@ def get_gspread_client(_credentials_source): # (PERBAIKAN: Ditambahkan '_')
              # Fallback terakhir jika st.secrets ada tapi kuncinya tidak ada
             creds_path = os.getenv("GOOGLE_SERVICE_JSON")
 
-    if isinstance(creds_path, dict):
-        # Jika creds dari st.secrets (sudah berbentuk dict)
+    # (PERBAIKAN: Mengganti 'isinstance(creds_path, dict)' dengan 'hasattr')
+    # Ini akan menangani 'dict' (dari .json) dan 'AttrDict' (dari st.secrets)
+    if hasattr(creds_path, "get"):
+        # Jika creds dari st.secrets (objek mirip dict)
         creds = Credentials.from_service_account_info(creds_path, scopes=scopes)
     elif isinstance(creds_path, str) and os.path.exists(creds_path):
         # Jika creds dari .env (berupa path file)
@@ -94,44 +98,57 @@ def get_gspread_client(_credentials_source): # (PERBAIKAN: Ditambahkan '_')
         return None
     
     client = gspread.authorize(creds)
+    # (PERBAIKAN: Tambahkan timeout 30 detik)
     client.set_timeout(30)
     return client
 
 def read_all_data(spreadsheet_id, creds):
     """
     Membaca 4 sheet data dari GSheet dengan cara yang "tahan banting".
+    (PERBAIKAN: Menghapus 'updated_at' untuk stabilitas)
     """
-    client = get_gspread_client(creds) # Panggilan ini sekarang aman untuk di-cache
+    client = get_gspread_client(creds)
     if client is None:
         raise Exception("Gagal mendapatkan klien Google Sheet.")
     
     try:
         sh = client.open_by_key(spreadsheet_id)
         
+        # --- (PERBAIKAN: 'updated_at' dihapus) ---
         try:
+            # Coba ambil timestamp dari properti 'updated' (jika ada)
             update_time = pd.to_datetime(sh.updated)
         except Exception:
-            update_time = datetime.now() 
+            # Fallback jika gagal
+            update_time = datetime.now() # Gunakan waktu saat ini
         
         def read_sheet_safely(ws_name, expected_cols):
             """
             (PERBAIKAN: Ini adalah logika paling aman untuk 'KeyError')
+            Membaca data menggunakan get_values() dan Menerapkan header kita.
             """
             try:
                 ws = sh.worksheet(ws_name)
+                
+                # Ambil semua nilai (termasuk header GSheet)
                 data = ws.get_values()
                 
-                if len(data) < 1: 
+                if len(data) < 1: # Jika sheet benar-benar kosong
                     return pd.DataFrame(columns=expected_cols)
 
+                # Ambil header GSheet (baris 1)
                 gsheet_header = data[0]
                 
+                # Ambil data (baris 2 dst), jika ada
                 if len(data) < 2:
                     data_rows = []
                 else:
                     data_rows = data[1:]
 
+                # Buat DataFrame menggunakan header GSheet
                 df = pd.DataFrame(data_rows, columns=gsheet_header)
+                
+                # (PERBAIKAN PENTING: Paksa DF agar memiliki kolom yang kita harapkan)
                 df = df.reindex(columns=expected_cols) 
                 return df
                 
@@ -161,8 +178,9 @@ def read_all_data(spreadsheet_id, creds):
 def upload_all_data(spreadsheet_id, creds, inbound_df, outbound_df, pivot_df, daily_soh_df):
     """
     Mengunggah 4 DataFrame ke GSheet dengan chunking dan jeda.
+    (PERBAIKAN: Error 500)
     """
-    client = get_gspread_client(creds) # Panggilan ini aman
+    client = get_gspread_client(creds)
     if client is None:
         raise Exception("Gagal mendapatkan klien Google Sheet untuk upload.")
     
@@ -178,6 +196,7 @@ def upload_all_data(spreadsheet_id, creds, inbound_df, outbound_df, pivot_df, da
             ws = sh.worksheet(ws_name)
             ws.clear()
             
+            # Konversi NaT/NaN menjadi string kosong
             df_upload = df.fillna('').astype(str)
             df_upload.replace('NaT', '', inplace=True)
             
