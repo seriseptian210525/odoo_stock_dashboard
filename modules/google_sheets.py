@@ -11,7 +11,8 @@ import os
 PIVOT_COLS = [
     'SKU', 'SKU Name', 'Location', 'Location Category', 
     'Status', 'Action', 'SOH', 
-    'Inbound_Qty', 'Outbound_Qty', 'Adjustment Qty',
+    'Inbound_Qty', 'Outbound_Qty', 
+    'Adjustment Qty', 'Adjustment Increase', 'Adjustment Decrease',
     'Daily Usage', 'Moves Category', 'Lead Time', 
     'Buffer Stock', 'Shortage', 
     'Central_SOH', 'Manufacture_SOH'
@@ -22,7 +23,7 @@ MOVES_COLS = [
     'SKU', 'SKU Name', 'Inbound_Qty', 'Outbound_Qty', 'Quantity', 
     'Status_Replenishment', # (Kolom Status 🟥 🟨 🟩)
     'Type', # (Tipe Inbound/Outbound)
-    'Adjustment Qty', 'Cumulative_SOH'
+    'Adjustment Qty', 'Adjustment Increase', 'Adjustment Decrease', 'Cumulative_SOH'
 ]
 
 
@@ -36,7 +37,8 @@ def _post_process_read_df(df, sheet_name):
     if sheet_name == "Pivot":
         # (PERBAIKAN: Skema disinkronkan)
         numeric_cols = [
-            'SOH', 'Inbound_Qty', 'Outbound_Qty', 'Adjustment Qty',
+            'SOH', 'Inbound_Qty', 'Outbound_Qty', 
+            'Adjustment Qty', 'Adjustment Increase', 'Adjustment Decrease',
             'Daily Usage', 'Lead Time', 'Buffer Stock', 'Shortage', 
             'Central_SOH', 'Manufacture_SOH'
         ]
@@ -45,7 +47,7 @@ def _post_process_read_df(df, sheet_name):
         # (PERBAIKAN: Skema disinkronkan)
         numeric_cols = [
             'Inbound_Qty', 'Outbound_Qty', 'Quantity', 
-            'Adjustment Qty', 'Cumulative_SOH'
+            'Adjustment Qty', 'Adjustment Increase', 'Adjustment Decrease', 'Cumulative_SOH'
         ]
 
     for col in numeric_cols:

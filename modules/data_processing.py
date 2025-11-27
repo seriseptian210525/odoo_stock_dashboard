@@ -99,6 +99,10 @@ def process_csv(uploaded_file):
     adj_mask = merged_df['Reference'].str.contains("Product Quantity Updated|Product Quantity Confirmed", case=False, na=False)
     merged_df['Adjustment Qty'] = np.where(adj_mask, merged_df['Signed_Quantity'], 0)
 
+    # (FITUR BARU: Pisahkan Adjustment Increase dan Decrease)
+    merged_df['Adjustment Increase'] = np.where(merged_df['Adjustment Qty'] > 0, merged_df['Adjustment Qty'], 0)
+    merged_df['Adjustment Decrease'] = np.where(merged_df['Adjustment Qty'] < 0, merged_df['Adjustment Qty'], 0)
+
     merged_df['Date'] = pd.to_datetime(merged_df['Date'], errors='coerce')
     merged_df = merged_df.dropna(subset=['Date']) 
     
@@ -119,7 +123,12 @@ def process_csv(uploaded_file):
 
     # --- LANGKAH 3.5 (BARU): Agregasi Adjustment Qty (Kuantitas Penyesuaian) SEBELUM difilter ---
     # (PERBAIKAN BUG 1b: Ini memperbaiki 'Adjustment Qty = 0' di pivot)
-    adj_agg_unfiltered = merged_df.groupby(['SKU', 'Location'])['Adjustment Qty'].sum().reset_index()
+    # (UPDATE: Tambahkan Increase dan Decrease ke agregasi)
+    adj_agg_unfiltered = merged_df.groupby(['SKU', 'Location']).agg({
+        'Adjustment Qty': 'sum',
+        'Adjustment Increase': 'sum',
+        'Adjustment Decrease': 'sum'
+    }).reset_index()
 
     # --- LANGKAH 4: Filter merged_df (setelah menghitung SOH agregat) ---
     merged_df_filtered = merged_df[~merged_df['Location Category'].isin(['Virtual Locations', 'Partners/Vendors'])]
@@ -211,9 +220,10 @@ def process_csv(uploaded_file):
     pivot_df[['Status', 'Action']] = pivot_df.apply(get_status_and_action, axis=1, result_type='expand')
     
     # (PERBAIKAN: Pindahkan 'Adjustment Qty' ke sini, setelah semua merge selesai)
-    if 'Adjustment Qty' not in pivot_df.columns:
-        pivot_df['Adjustment Qty'] = 0.0
-    pivot_df['Adjustment Qty'] = pivot_df['Adjustment Qty'].fillna(0)
+    for col in ['Adjustment Qty', 'Adjustment Increase', 'Adjustment Decrease']:
+        if col not in pivot_df.columns:
+            pivot_df[col] = 0.0
+        pivot_df[col] = pivot_df[col].fillna(0)
 
     # 5f. Filter Pivot agar hanya menampilkan "Pool" dan "Bengkel Rekanan"
     pivot_df = pivot_df[pivot_df['Location Category'].isin(['Pool', 'Bengkel Rekanan'])].copy()
@@ -222,7 +232,8 @@ def process_csv(uploaded_file):
     cols_pivot = [
         'SKU', 'SKU Name', 'Location', 'Location Category', 
         'Status', 'Action', 'SOH', 
-        'Inbound_Qty', 'Outbound_Qty', 'Adjustment Qty',
+        'Inbound_Qty', 'Outbound_Qty', 
+        'Adjustment Qty', 'Adjustment Increase', 'Adjustment Decrease',
         'Daily Usage', 'Moves Category', 'Lead Time', 
         'Buffer Stock', 'Shortage', 
         'Central_SOH', 'Manufacture_SOH'
@@ -263,7 +274,7 @@ def process_csv(uploaded_file):
         'SKU', 'SKU Name', 'Inbound_Qty', 'Outbound_Qty', 'Quantity', 
         'Status_Replenishment', 
         'Type', 
-        'Adjustment Qty', 'Cumulative_SOH'
+        'Adjustment Qty', 'Adjustment Increase', 'Adjustment Decrease', 'Cumulative_SOH'
     ]
     
     daily_soh_df = log_df.reindex(columns=cols_moves).sort_values(by=['Location', 'SKU', 'Date'], ascending=True)

@@ -252,12 +252,20 @@ def plot_adjustment_analysis_tables(df: pd.DataFrame):
         st.warning("Tidak ada data adjustment untuk dianalisis.", icon="⚠️")
         return
 
+    # (PERBAIKAN: Pastikan kolom Increase/Decrease ada untuk mencegah KeyError)
+    for col in ['Adjustment Increase', 'Adjustment Decrease']:
+        if col not in df_adj.columns:
+            df_adj[col] = 0.0
+
     # 1. Analisis SKU
     st.markdown("#### Top SKU Di-Adjustment")
     sku_analysis = df_adj.groupby(['SKU', 'SKU Name']).agg(
-        Jumlah_Adjustment=('SKU', 'count'),
+        Frekuensi=('SKU', 'count'),
+        Jumlah_Adjustment=('Adjustment Qty', 'sum'),
+        Adjustment_Increase=('Adjustment Increase', 'sum'),
+        Adjustment_Decrease=('Adjustment Decrease', 'sum'),
         Terakhir_Adjustment=('Date', 'max')
-    ).sort_values(by='Jumlah_Adjustment', ascending=False)
+    ).sort_values(by='Jumlah_Adjustment', ascending=False) # Sort by Net
     
     sku_analysis = sku_analysis.reset_index()
     
@@ -266,7 +274,10 @@ def plot_adjustment_analysis_tables(df: pd.DataFrame):
     # 2. Analisis Lokasi
     st.markdown("#### Top Lokasi Adjustment")
     loc_analysis = df_adj.groupby(['Location', 'Location Category']).agg(
-        Jumlah_Adjustment=('SKU', 'count'),
+        Frekuensi=('SKU', 'count'),
+        Jumlah_Adjustment=('Adjustment Qty', 'sum'),
+        Adjustment_Increase=('Adjustment Increase', 'sum'),
+        Adjustment_Decrease=('Adjustment Decrease', 'sum'),
         Terakhir_Adjustment=('Date', 'max')
     ).sort_values(by='Jumlah_Adjustment', ascending=False)
     
@@ -276,7 +287,10 @@ def plot_adjustment_analysis_tables(df: pd.DataFrame):
     # 3. Analisis Pembuat
     st.markdown("#### Top User Adjustment")
     creator_analysis = df_adj.groupby('Created by').agg(
-        Jumlah_Adjustment=('SKU', 'count'),
+        Frekuensi=('SKU', 'count'),
+        Jumlah_Adjustment=('Adjustment Qty', 'sum'),
+        Adjustment_Increase=('Adjustment Increase', 'sum'),
+        Adjustment_Decrease=('Adjustment Decrease', 'sum'),
         Terakhir_Adjustment=('Date', 'max')
     ).sort_values(by='Jumlah_Adjustment', ascending=False)
     
