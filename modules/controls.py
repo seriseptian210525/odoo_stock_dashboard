@@ -85,14 +85,14 @@ def display_controls(spreadsheet_id, creds):
     st.markdown("""
         Selamat datang di Dasbor Stok Odoo.
         - **Refresh Data:** Muat data terbaru yang ada di Google Sheet.
-        - **Proses & Update:** Unggah file `moves.csv` baru, proses, dan perbarui data di Google Sheet.
+        - **Proses & Update:** Unggah file `Product Moves (Stock Move Line) (stock.move.line).csv` baru, proses, dan perbarui data di Google Sheet.
     """)
     
     col_upload, col_buttons = st.columns([1.5, 1]) # Kolom upload lebih besar
 
     with col_upload:
         uploaded_file = st.file_uploader(
-            "Unggah file `moves.csv` dari Odoo", 
+            "Unggah file `Product Moves (Stock Move Line) (stock.move.line).csv` dari Odoo", 
             type=["csv"],
             key="csv_uploader"
         )

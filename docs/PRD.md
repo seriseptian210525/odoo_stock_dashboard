@@ -1,8 +1,8 @@
 # Product Requirements Document (PRD)
 **Proyek:** Odoo Stock Dashboard  
-**Versi:** 1.0  
-**Tanggal:** 26 November 2025  
-**Status:** Draft
+**Versi:** 2.0  
+**Tanggal:** 27 November 2025  
+**Status:** Final
 
 ---
 
@@ -92,7 +92,7 @@ Membangun dashboard berbasis web yang dapat:
 ---
 
 ## 5. Rencana Pengembangan Masa Depan
-*   [ ] Konfigurasi aturan bisnis (Lead Time, Kategori) via UI (menghindari hardcode).
+*   [x] Konfigurasi aturan bisnis (Lead Time, Kategori) via UI (menghindari hardcode).
 *   [x] Optimasi Adjustment Analysis 
 		(Menambahkan: 
 		Frekuensi: Jumlah kali transaksi dilakukan.
@@ -100,4 +100,4 @@ Membangun dashboard berbasis web yang dapat:
 		Adj. Decrease: Total pengurangan stok (merah).
 		Net Adjustment: Total bersih (Increase + Decrease).
 		).
-*   [ ] Notifikasi email/Telegram untuk status "Danger".
+*   [x] Notifikasi email/Telegram untuk status "Danger"(automation terpisah).
